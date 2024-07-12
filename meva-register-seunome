@@ -1,0 +1,178 @@
+
+Entidades
+java
+
+package com.meva.register.model;
+
+import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private String name;
+    private String email;
+    private String password;
+    
+    @ManyToOne
+    @JoinColumn(name = "family_id")
+    private Family family;
+
+    // Getters and setters
+}
+
+@Entity
+public class Family {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    @OneToMany(mappedBy = "family")
+    private Set<User> users = new HashSet<>();
+
+    // Getters and setters
+}
+
+
+Repositórios
+java
+
+package com.meva.register.repository;
+
+import com.meva.register.model.User;
+import com.meva.register.model.Family;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    // Additional query methods if necessary
+}
+
+public interface FamilyRepository extends JpaRepository<Family, Long> {
+    // Additional query methods if necessary
+}
+
+
+ Serviços
+java
+Copiar código
+package com.meva.register.service;
+
+import com.meva.register.model.User;
+import com.meva.register.model.Family;
+import com.meva.register.repository.UserRepository;
+import com.meva.register.repository.FamilyRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private FamilyRepository familyRepository;
+
+    public User registerUser(User user, Long familyId) {
+        Optional<Family> familyOpt = familyRepository.findById(familyId);
+        familyOpt.ifPresent(user::setFamily);
+        return userRepository.save(user);
+    }
+
+    public User updateUser(Long id, User userDetails) {
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        user.setName(userDetails.getName());
+        user.setEmail(userDetails.getEmail());
+        user.setPassword(userDetails.getPassword());
+        user.setFamily(userDetails.getFamily());
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+}
+
+ Controladores
+java
+package com.meva.register.controller;
+
+import com.meva.register.model.User;
+import com.meva.register.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @PostMapping("/register")
+    public ResponseEntity<User> registerUser(@RequestBody User user, @RequestParam Long familyId) {
+        User registeredUser = userService.registerUser(user, familyId);
+        return ResponseEntity.ok(registeredUser);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+        User updatedUser = userService.updateUser(id, userDetails);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+Configuração do Banco de Dados
+Adicione as configurações do banco de dados em application.properties ou application.yml.
+
+properties
+# application.properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/meva
+spring.datasource.username=postgres
+spring.datasource.password=yourpassword
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+Resumo Total do projeto 
+
+meva-register-seunome
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── com
+│   │   │       └── meva
+│   │   │           └── register
+│   │   │               ├── model
+│   │   │               │   ├── User.java
+│   │   │               │   └── Family.java
+│   │   │               ├── repository
+│   │   │               │   ├── UserRepository.java
+│   │   │               │   └── FamilyRepository.java
+│   │   │               ├── service
+│   │   │               │   └── UserService.java
+│   │   │               └── controller
+│   │   │                   └── UserController.java
+│   │   └── resources
+│   │       └── application.properties
+└── pom.xml
+
+
+
+
